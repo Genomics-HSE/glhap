@@ -7,7 +7,6 @@
 from anytree import NodeMixin, RenderTree
 import numpy as np
 import pysam
-import allel
 from pysam import VariantFile, FastaFile
 from anytree import find_by_attr, PreOrderIter
 import json
