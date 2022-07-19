@@ -1,0 +1,6 @@
+#fasta indexes
+*.fai
+*.bai
+*.sa
+#logs
+*.log
