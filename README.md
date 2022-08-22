@@ -83,4 +83,12 @@ then
 
 ./gl_cont.py bam.bam ref.ref contaminants.fa nIter
 where
-nIter - number of iteration for MCMC   
+nIter - number of iteration for MCMC
+
+
+### Simulate data
+------------------
+You may generate data with script based on simlord
+
+python contamsim.py hap1.fa prop1 [...] hapn.fa propn
+prop1 is number of reads divided by 100000   
