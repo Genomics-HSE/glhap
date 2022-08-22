@@ -59,7 +59,7 @@ samtools mpileup -f ref.fa -B -o pileup.pileup  in.bam
 you must have A "filelist.txt" file in folder with executive file where list of fasta files must be written.
 
 
-#gl_cont
+# gl_cont
 
 This software provides you to estimate contamination in DNA based on quality score.
 
