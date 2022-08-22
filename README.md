@@ -71,7 +71,8 @@ Dependencies
 - biopython                 1.78
 - cython                    0.29.30
 - pysam                     0.19.1
-
+Picard
+GATK 
 
 
 How to run:
