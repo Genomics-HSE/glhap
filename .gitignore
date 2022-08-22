@@ -4,3 +4,4 @@
 *.sa
 #logs
 *.log
+gatk.jar
