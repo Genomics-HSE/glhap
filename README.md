@@ -56,4 +56,31 @@ g++ hamgrep.c -lhts -o hamgrep
 
 samtools mpileup -f ref.fa -B -o pileup.pileup  in.bam
 
-you must have A "filelist.txt" file in folder with executive file where list of fasta files must be written. 
+you must have A "filelist.txt" file in folder with executive file where list of fasta files must be written.
+
+
+#gl_cont
+
+This software provides you to estimate contamination in DNA based on quality score.
+
+Dependencies
+------------
+- simlord                   1.0.4 
+- numpy                     1.22.3 
+- tqdm                      4.64.0 
+- biopython                 1.78
+- cython                    0.29.30
+- pysam                     0.19.1
+
+
+
+How to run:
+-----------
+for first use you should type
+python setup.pu build_ext  --inplace
+
+then
+
+./gl_cont.py bam.bam ref.ref contaminants.fa nIter
+where
+nIter - number of iteration for MCMC   
