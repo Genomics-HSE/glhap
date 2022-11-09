@@ -52,7 +52,7 @@ def make_fastq(genomes_fnames, proportion, err_base, del_base, ins_base, coverag
     for i, genome_file in enumerate(genomes_fnames):
         os.system(f'cp {genome_file} ./genome_{i}.fa')
         if i != 0:
-            os.system(f'echo {genome_file} >> contaminants.fa')
+            os.system(f'cat {genome_file} >> contaminants.fa')
         os.system(f'''sed -i '' "1s/.*/>chrM/" genome_{i}.fa''')
         fname =  f'genome_{i}.fa'
         command_line =         f'simlord        -rr {fname}        -pi {ins_base}        -pd {del_base}        -ps {err_base}        -fl 100        -c {proportion[i] * coverage}        genome_{i}'
