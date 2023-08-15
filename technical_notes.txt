@@ -1,0 +1,21 @@
+How json file of tree does look like:
+
+json is set of lists, each lists has form [number, name, mutation1, mutation2, ..., mutationN]
+mutation has form discribed in phylotree.
+
+
+number.
+For root number is 0,
+For descendants of root number is 0 as well.
+For their descendants number 1, for next descendants number is 2, etc.
+
+So, if you see number n>0, then its parent is nearest node above with number n-1.
+
+For convenience, there is renumeration in programm:
+
+------------------
+for i in d:
+    i[0] += 1
+d[0][0]=0
+------------------
+
