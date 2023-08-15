@@ -71,7 +71,7 @@ def get_deletion(node):
     return deletion
 
 
-def make_tree(tree,node,pos=0):    
+def make_tree_(tree,node,pos=0):    
     '''
     Initializate tree structure of phylogenetic tree
     Parameters:
@@ -83,6 +83,38 @@ def make_tree(tree,node,pos=0):
     unnecessary parameter. position of current node in tree list
     
     '''
+
+    
+    posit = pos + 1
+    i = posit
+    while i<len(tree) and tree[i][0] >= tree[pos][0]+1:
+        if tree[i][0] == tree[pos][0]+1:
+            # print(node.name,tree[i][1])
+            snps = get_snp(tree[i])
+            # insertion = get_insertion(tree[i])
+            insertion = set()
+            # deletion = get_deletion(tree[i])
+            deletion = set()
+            tmp = Node(tree[i][1],snps,insertion,parent=node)
+            
+            make_tree_(tree,tmp,i)
+
+        i += 1        
+
+    
+    
+    
+    
+def make_tree(json_file):
+    with open('array/array.json') as f:
+        d = json.load(f) # d - это список python
+    for i in d:
+        i[0] += 1
+    d[0][0]=0
+    a = Node(d[0][1],[])
+    make_tree_(d,a,0)
+    return a
+    
 
     
     posit = pos + 1
