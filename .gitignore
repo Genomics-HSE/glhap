@@ -5,3 +5,14 @@
 #logs
 *.log
 gatk.jar
+*.bam
+*.gz
+*.csi
+*.cns
+*.amb
+*.ann
+*.bwt
+*.pac
+gargammel*
+.ipynb_checkpoints
+.DS_Store
