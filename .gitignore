@@ -16,3 +16,4 @@ gatk.jar
 gargammel*
 .ipynb_checkpoints
 .DS_Store
+*.pyc
