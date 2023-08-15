@@ -1,5 +1,5 @@
 from pysam import VariantFile, FastaFile
-
+import numpy as np
 
 def get_log_monozygous(bcf: VariantFile):
     '''
@@ -29,6 +29,8 @@ def get_log_monozygous(bcf: VariantFile):
             k += s
             s += 1
     return gls
+
+
 
 
 def call_likelihood(gls,node,ref,lh=0):
@@ -77,6 +79,39 @@ def call_likelihood(gls,node,ref,lh=0):
 #                 lh = lh - calculate_pl(gls,ref,pos) + delt[1]
     return lh
         
+    
+def calculate_likelihood(vcf, ref):
+    '''
+    Calculates genotype likelihood against reference genome
+    
+    
+    Parameters:
+    -----------
+    vcf : VariantFile
+    vcf/bcf file
+    
+    ref: FastaFile
+    reference genome
+    --
+    Returns
+    -------
+    lh : float
+    likelihood against reference
+    '''
+    lh = 0
+    ref = ref.fetch('chrM')
+    gls = get_log_monozygous(vcf)
+    for i in range(len(ref)):
+        if ref[i].capitalize() == 'A':
+            lh += gls[i,0]
+        if ref[i].capitalize() == 'T':
+            lh += gls[i,1]
+        if ref[i].capitalize() == 'G':
+            lh += gls[i,2]
+        if ref[i].capitalize() == 'C':
+            lh += gls[i,3]
+    return lh    
+    
     
 def prunung(node, ref, ref_lh, gls):
     '''
