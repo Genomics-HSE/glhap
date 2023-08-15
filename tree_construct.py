@@ -50,8 +50,8 @@ def get_insertion(node):
         if '.' in node[i]:
             dot_pos = node[i].find('.')
             pos = int(node[i][1:dot_pos])
-#             size = ''.join(k for k in node[i][dot_pos+1:] if  k.isdigit())
-#             insert = ''.join(k for k in node[i][dot_pos+1:] if  k.isalpha())
+            size = ''.join(k for k in node[i][dot_pos+1:] if  k.isdigit())
+            insert = ''.join(k for k in node[i][dot_pos+1:] if  k.isalpha())
             ins.add(pos)
     return ins
 
@@ -64,6 +64,7 @@ def get_deletion(node):
     for i in range(2,len(node)):
         if node[i][-1]=='d':
             if node[i][0].isalpha():
+                # print(node)
                 deletion.add(int(node[i][1:-1]))
             else:
                 dash_pos = node[i].find('-')
@@ -89,13 +90,16 @@ def make_tree_(tree,node,pos=0):
     i = posit
     while i<len(tree) and tree[i][0] >= tree[pos][0]+1:
         if tree[i][0] == tree[pos][0]+1:
+            if tree[i][2] == 'reserved':
+                i += 1
+                continue
             # print(node.name,tree[i][1])
             snps = get_snp(tree[i])
             # insertion = get_insertion(tree[i])
             insertion = set()
-            # deletion = get_deletion(tree[i])
-            deletion = set()
-            tmp = Node(tree[i][1],snps,insertion,parent=node)
+            deletion = get_deletion(tree[i])
+            # deletion = set()
+            tmp = Node(tree[i][1], snps, insertion, deletion, parent=node)
             
             make_tree_(tree,tmp,i)
 
@@ -114,21 +118,4 @@ def make_tree(json_file):
     a = Node(d[0][1],[])
     make_tree_(d,a,0)
     return a
-    
-
-    
-    posit = pos + 1
-    i = posit
-    while i<len(tree) and tree[i][0] >= tree[pos][0]+1:
-        if tree[i][0] == tree[pos][0]+1:
-            # print(node.name,tree[i][1])
-            snps = get_snp(tree[i])
-            # insertion = get_insertion(tree[i])
-            insertion = set()
-            # deletion = get_deletion(tree[i])
-            deletion = set()
-            tmp = Node(tree[i][1],snps,insertion,parent=node)
-            
-            make_tree(tree,tmp,i)
-
-        i += 1        
+      
