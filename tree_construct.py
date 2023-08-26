@@ -47,9 +47,9 @@ def get_insertion(node):
     '''
     ins = set()
     for i in range(2,len(node)):
-        if '.' in node[i]:
+        if '.' in node[i] and 'd' not in node[i] and '!' not in node[i] and '(' not in node[i] and ')' not in node[i]:
             dot_pos = node[i].find('.')
-            pos = int(node[i][1:dot_pos])
+            pos = int(node[i][0:dot_pos])
             size = ''.join(k for k in node[i][dot_pos+1:] if  k.isdigit())
             insert = ''.join(k for k in node[i][dot_pos+1:] if  k.isalpha())
             ins.add(pos)
@@ -95,8 +95,8 @@ def make_tree_(tree,node,pos=0):
                 continue
             # print(node.name,tree[i][1])
             snps = get_snp(tree[i])
-            # insertion = get_insertion(tree[i])
-            insertion = set()
+            insertion = get_insertion(tree[i])
+            # insertion = set()
             deletion = get_deletion(tree[i])
             # deletion = set()
             tmp = Node(tree[i][1], snps, insertion, deletion, parent=node)
