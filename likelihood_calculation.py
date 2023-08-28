@@ -6,7 +6,7 @@ def get_log_monozygous(bcf: VariantFile):
     PL scores for bcf
     
     '''
-    gls = np.full((16569,4),-1)
+    gls = np.full((16569,4),-1) # maybe it should be more sophisticated for other sizes?
     for rec in bcf.fetch():
         pos = rec.pos
         pls = rec.samples.values()[0]['PL']

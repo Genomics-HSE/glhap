@@ -110,7 +110,7 @@ def make_tree_(tree,node,pos=0):
     
     
 def make_tree(json_file):
-    with open('array/array.json') as f:
+    with open(json_file) as f:
         d = json.load(f) # d - это список python
     for i in d:
         i[0] += 1
