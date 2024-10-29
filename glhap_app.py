@@ -13,9 +13,10 @@ import pickle
 
 
 class Node(NodeMixin):
-    def __init__(self, name, snps=[],insertion=[],deletion = [], parent=None, children=None):
+    def __init__(self, name, snps=[], snps_back=[], insertion=[],deletion = [], parent=None, children=None):
         self.name = name
         self.snps = snps
+        self.snps_back = snps_back
         self.insertion = insertion
         self.deletion = deletion
         self.parent = parent
@@ -24,7 +25,7 @@ class Node(NodeMixin):
              self.children = children
     
     def __repr__(self):
-             return self.name +" "+ str(self.lh) + " " + str(self.snps)
+             return self.name + " " + str(self.lh) + " " + str(self.snps)
     def __str__(self):
         return self.name
 
@@ -44,10 +45,32 @@ def get_snp(node):
     snp = list()
     atgc = set(['A','T','G','C','a','t','g','c'])
     for i in range(2, len(node)):
-        record = node[i].replace('(', '').replace(')', '').replace('!', '')
+        record = node[i].replace('(', '').replace(')', '')
         if record[0] in atgc and record[-1] in atgc:
             snp.append([record[0], record[-1], int(record[1:-1])])
     return snp
+
+
+def get_snp_back(node):
+    '''
+    Returns snps fron node: Node
+    
+    Paramters:
+    node : Node
+    node in phylogenetic tree
+    
+    Returns:
+    list of lists of [old_nucleotide,new_nucleotid, position]
+    '''
+    
+    snp = list()
+    atgc = set(['A','T','G','C','a','t','g','c'])
+    for i in range(2, len(node)):
+        record = node[i].replace('(', '').replace(')', '')
+        if record[0] in atgc and record[-1]=='!' and record[-2] in atgc:
+            snp.append([record[0], record[-2], int(record[1:-2])])
+    return snp
+
 
 
 def get_insertion(node):
@@ -95,9 +118,10 @@ def make_tree(tree,root,pos=0):
             if tree[i][0] == tree[pos][0]+1:
     #             print(node.name,tree[i][1])
                 snps = get_snp(tree[i])
+                snps_back = get_snp_back(tree[i])
                 insertion = get_insertion(tree[i])
                 
-                tmp = Node(tree[i][1],snps,insertion,parent=node)
+                tmp = Node(tree[i][1],snps, snps_back,insertion,parent=node)
                 queue.append([i, tmp])
                 # print(tree[i][1])
             i += 1  
@@ -155,25 +179,39 @@ def call_likelihood(gls,node,ref,insertions,deletions,lh=0):
     likelihood of haplogroup
     '''
     snps = node.snps
+    snps_back = node.snps_back
+    
+    base_dict= {'A':0, 'T':1, 'G':2, 'C':3}
     for snp in snps:
 #       snp = [old, new, pos]
         pos = snp[2]-1
-        if snp[1].capitalize() == 'A':
-            lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,0]
+        # if snp[1]x.capitalize() == 'A':
+            # lh = lh - calculate_pl(gls, ref, pos)+ gls[pos,0]
 #             print(1,snp[1].capitalize())
-        if snp[1].capitalize() == 'T':
-            lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,1]
+        # if snp[1].capitalize() == 'T':
+            # lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,1]
 #             print(2,snp[1].capitalize())
-        if snp[1].capitalize() == 'G':
-            lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,2]
+        # if snp[1].capitalize() == 'G':
+            # lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,2]
 #             print(3,snp[1].capitalize())
-        if snp[1].capitalize() == 'C':
-            lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,3]
+        # if snp[1].capitalize() == 'C':
+            # lh = lh - calculate_pl(gls,ref, pos)+ gls[pos,3]
 #             print(4,snp[1].capitalize())
+
+        lh = lh - calculate_pl(gls,ref, pos)+ gls[pos, base_dict[snp[1].capitalize()]]
+
+
+    for snp in snps_back:
+#       snp = [old, new, pos]
+        pos = snp[2]-1
+        lh = lh - gls[pos, base_dict[snp[0].capitalize()]]+ gls[pos, base_dict[snp[1].capitalize()]]
+
+#TODO implementation to include indels.
     return lh
 
 
 def calculate_likelihood(vcf, ref):
+    
     '''
     Calculates genotype likelihood against reference genome
     
@@ -191,10 +229,11 @@ def calculate_likelihood(vcf, ref):
     lh : float
     likelihood against reference
     '''
+    
     lh = 0
     ref = ref.fetch('chrM')
     gls = get_log_monozygous(vcf)
-#     gls[gls<0]=-10**6
+
     for i in range(len(ref)):
         if ref[i].capitalize() == 'A':
             lh += gls[i,0]
@@ -258,7 +297,7 @@ def calculate_pl(gls, ref,pos):
 def glhap(ref, tree, bcf_in):
     try:
         with open(tree) as f:
-            d = json.load(f) # d - это список python
+            d = json.load(f)
     except OSError:
         return("No such tree file")
 
