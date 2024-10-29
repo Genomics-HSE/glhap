@@ -25,11 +25,11 @@ class Node(NodeMixin):
 def get_snp(node):
     '''
     Returns snps fron node: Node
-
+    
     Paramters:
     node : Node
     node in phylogenetic tree
-
+    
     Returns:
     list of lists of [old_nucleotide,new_nucleotid, position]
     '''
@@ -38,6 +38,8 @@ def get_snp(node):
     for i in range(2,len(node)):
         if node[i][0] in atgc and node[i][-1] in atgc:
             snp.append([node[i][0],node[i][-1],int(node[i][1:-1])])
+        elif node[i][0] in atgc and node[i][-1]=='!' and node[i][-1] in atgc:
+            snp.append([node[i][0],node[i][-2],int(node[i][1:-2])])
     return snp
 
 
@@ -68,7 +70,7 @@ def get_deletion(node):
                 deletion.add(int(node[i][1:-1]))
             else:
                 dash_pos = node[i].find('-')
-                deletion.add(int(node[i][1:dash_pos]))
+                # deletion.add(int(node[i][1:dash_pos]))
     return deletion
 
 

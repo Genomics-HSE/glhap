@@ -51,6 +51,8 @@ def get_snp(node):
     for i in range(2,len(node)):
         if node[i][0] in atgc and node[i][-1] in atgc:
             snp.append([node[i][0],node[i][-1],int(node[i][1:-1])])
+        elif node[i][0] in atgc and node[i][-1]=='!' and node[i][-1] in atgc:
+            snp.append([node[i][0],node[i][-2],int(node[i][1:-2])])
     return snp
 
 
@@ -121,7 +123,6 @@ def make_tree(tree,node,pos=0):
 def get_log_monozygous(bcf: VariantFile):
     '''
     PL scores for bcf
-    
     '''
     gls = np.full((16569,4),-1)
     for rec in bcf.fetch():
@@ -188,17 +189,17 @@ def call_likelihood(gls,node,ref,insertions,deletions,lh=0):
 #             print(4,snp[1].capitalize())
         
     
-        for ins in insertions:
-            if ins[0] in node.insertion:
-#           ins = [pos,lh]
-                pos = ins[0]-1
-                lh = lh - calculate_pl(gls,ref,pos) + lh[1]
+#         for ins in insertions:
+#             if ins[0] in node.insertion:
+# #           ins = [pos,lh]
+#                 pos = ins[0]-1
+#                 lh = lh - calculate_pl(gls,ref,pos) + lh[1]
 
-        for delt in deletions:
-            if ins[0] in node.deletion:
-#           delt = [pos,lh]
-                pos = delt[0]-1
-                lh = lh - calculate_pl(gls,ref,pos) + delt[1]
+#         for delt in deletions:
+#             if ins[0] in node.deletion:
+# #           delt = [pos,lh]
+#                 pos = delt[0]-1
+#                 lh = lh - calculate_pl(gls,ref,pos) + delt[1]
     return lh
         
     
@@ -245,7 +246,7 @@ def calculate_likelihood(vcf, ref):
 # In[10]:
 
 
-def prunung(node,ref,gls,deletions,insertions):
+def pruning(node,ref,gls,deletions,insertions):
     '''
     Calculates genotype likelihood for each haplogroup in the tree
     Parameters:
@@ -262,7 +263,7 @@ def prunung(node,ref,gls,deletions,insertions):
     else:
         node.lh = call_likelihood(gls,node,ref,insertions,deletions,node.parent.lh)
     for i in node.children:
-        prunung(i,ref,gls,deletions,insertions)
+        pruning(i,ref,gls,deletions,insertions)
 
 
 # In[11]:
@@ -321,28 +322,6 @@ for i in d:
 bcf_in = VariantFile(args.vcf) 
 ref = FastaFile(args.ref)
 
-
-# In[14]:
-
-
-
-
-# with open('PhyloTree.org-parser/array.json') as f:
-#     d = json.load(f) # d - это список python
-# #     print(d)
-# for i in d:
-#     i[0] += 1
-#     d[0][0]=0
-
-# bcf_in = VariantFile("PhyloTree.org-parser/out4.vcf") 
-# ref = FastaFile('ref.fa')
-
-# # print(d)
-
-
-# In[15]:
-
-
 a = Node(d[0][1],[])
 make_tree(d,a,0)
 
@@ -364,9 +343,6 @@ for rec in bcf_in.fetch():
             insertions.append([rec.pos + 1, -rec.samples.values()[0]['PL'][-1]/10])
 
 
-# In[18]:
-
-
 # Deletions
 deletions = []
 for rec in bcf_in.fetch():
@@ -375,48 +351,28 @@ for rec in bcf_in.fetch():
             deletions.append([rec.pos + 1, -rec.samples.values()[0]['PL'][-1]/10])
 
 
-# In[19]:
-
-
 gls = get_log_monozygous(bcf_in)
-prunung(a,ref,gls,insertions,deletions)
-
-
-# In[20]:
-
-
+pruning(a,ref,gls,insertions,deletions)
 key = lambda x: x.lh
-
-
-# In[21]:
-
-
 S = list()
 for i in PreOrderIter(a):
     S.append(i)
-
-
-# In[22]:
-
+j = 0
+i= 0 
 
 S.sort(key = key,reverse=True)
 
-
-# In[23]:
-
-
-for i in range(10):
-    print(S[i].name+",lh = ",S[i].lh)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
+print("Haplogroup\tPL score")
+while i!=1:
+    if S[i].name != '-':
+        print(f"{S[i].name}\t{S[i].lh}")
+        j+=1
+    i+=1
+    
+    
+    print("Haplogroup\tPL score")
+while i!=1:
+    if S[i].name != '-':
+        print(f"{S[i].name}\t{S[i].lh}")
+        j+=1
+    i+=1
