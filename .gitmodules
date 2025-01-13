@@ -1,0 +1,3 @@
+[submodule "JSON-Haplogroup-Tree-Parser"]
+	path = JSON-Haplogroup-Tree-Parser
+	url = https://github.com/RandyHarr/JSON-Haplogroup-Tree-Parser.git
