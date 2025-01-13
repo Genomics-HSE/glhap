@@ -1,10 +1,11 @@
 import json
 from anytree import Node, NodeMixin
+from anytree.exporter import JsonExporter
 from pprint import pprint
 import csv
 
 snp_csv_filename = 'SNP_Index.csv'
-tree_in_fn = 'JSON-Haplogroup-Tree-Parser/yfull_ytree_extracted_2024-12-27.json'
+tree_in_fn = 'yfull_ytree_extracted_2024-12-27.json'
 
 class YNode(NodeMixin):
     """
@@ -80,7 +81,7 @@ def expand_snps(haplogroup_dict: dict, snps_dict: dict):
             # print(snp_code)
             if snp_code in snps_dict:
                 if len(snps_dict[snp_code][1])==4 and snps_dict[snp_code][1][0] in nucleotides and snps_dict[snp_code][1][3] in nucleotides:
-                    haplogroup_dict['snps'].append([snps_dict[snp_code][1][0], snps_dict[snp_code][1][3], snps_dict[snp_code][0]])
+                    haplogroup_dict['snps'].append([snps_dict[snp_code][1][0], snps_dict[snp_code][1][3], int(snps_dict[snp_code][0])])
                 break
                     
 
@@ -97,10 +98,12 @@ def make_anytree(tree_json_filename, snp_csv_filename):
     for x in anytree_dict:
         if x!='root':
             anytree_dict[x].parent = anytree_dict[anytree_dict[x].parent_id]
-    
+    root = anytree_dict['root']
     exporter = JsonExporter(indent=2, sort_keys=True)
     with open('yFull.json', 'w') as f:
         f.write(exporter.export(root))
 
     return(anytree_dict['root'])
+
+make_anytree(tree_in_fn, snp_csv_filename)
     
