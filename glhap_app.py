@@ -11,7 +11,7 @@ import pysam
 import numpy as np
 from anytree import NodeMixin, RenderTree
 
-global_it = 0
+# global_it = 0
 
 
 class Node(NodeMixin):
@@ -69,7 +69,7 @@ def make_tree_from_yFull_json(json_file):
     return root
 
 
-root = make_tree_from_yFull_json("yFull.json")
+root = make_tree_from_yFull_json("yFull.json")  
 
 # s = make_tree_from_yFull_json('yFull.json')
 # from pprint import pprint
@@ -195,29 +195,30 @@ def get_log_monozygous(bcf: VariantFile, chrom="chrM"):
     if chrom == "chrM":
         N = 16569
     elif chrom == "chrY":
-        start = 2781490
-        end = 56887900
-        N = end - start + 1
+        N = 57227415
     gls = np.full((N, 4), -1)
-    for rec in bcf.fetch(chrom):
-        pos = rec.pos - start
+    for i, rec in enumerate(bcf.fetch(chrom)):
+        # if i == 5:
+            # return - gls / 10
+        pos = rec.pos
+        # print(pos)
         pls = rec.samples.values()[0]["PL"]
         alt = rec.alleles
         k = 0
         s = 2
         for i in range(len(alt)):
             if alt[i] == "A":
-                gls[pos - 1][0] = pls[k]
+                gls[pos][0] = pls[k]
             elif alt[i] == "T":
-                gls[pos - 1][1] = pls[k]
+                gls[pos][1] = pls[k]
             elif alt[i] == "G":
-                gls[pos - 1][2] = pls[k]
+                gls[pos][2] = pls[k]
             elif alt[i] == "C":
-                gls[pos - 1][3] = pls[k]
+                gls[pos][3] = pls[k]
             elif alt[i] == "<*>":
                 for j in range(4):
-                    if gls[pos - 1][j] == -1:
-                        gls[pos - 1][j] = pls[k]
+                    if gls[pos][j] == -1:
+                        gls[pos][j] = pls[k]
             k += s
             s += 1
     return -gls / 10
@@ -250,9 +251,7 @@ def call_likelihood(gls, node, ref, insertions, deletions, chrom, lh=0):
     if chrom == "chrM":
         N = 16569
     elif chrom == "chrY":
-        start = 2781490
-        end = 56887900
-        N = end - start + 1
+        N = 57227415
 
     snps = node.snps
     snps_back = node.snps_back
@@ -260,10 +259,7 @@ def call_likelihood(gls, node, ref, insertions, deletions, chrom, lh=0):
     base_dict = {"A": 0, "T": 1, "G": 2, "C": 3}
     for snp in snps:
         #       snp = [old, new, pos]
-        pos = snp[2]
-        print("pos before", pos)
-        pos = pos - start
-        print("pos after", pos)
+        pos = snp[2]-1
 
         lh = (
             lh
@@ -309,26 +305,24 @@ def calculate_likelihood(ref, gls, chrom="chrM"):
     if chrom == "chrM":
         N = 16569
     elif chrom == "chrY":
-        start = 2781490
-        end = 56887900
-        N = end - start + 1
+        N = 57227415
     # gls = get_log_monozygous(vcf)
 
     for i in range(N):
         if ref[i].capitalize() == "A":
             lh += gls[i, 0]
-        if ref[i].capitalize() == "T":
+        elif ref[i].capitalize() == "T":
             lh += gls[i, 1]
-        if ref[i].capitalize() == "G":
+        elif ref[i].capitalize() == "G":
             lh += gls[i, 2]
-        if ref[i].capitalize() == "C":
+        elif ref[i].capitalize() == "C":
             lh += gls[i, 3]
     return lh
 
 
 ref = "Homo_sapiens.GRCh38.dna.chromosome.Y.fa"
 bcf = "in.vcf.gz"
-gls = get_log_monozygous(bcf, chrom)
+# gls = get_log_monozygous(bcf, chrom)
 # fasta = FastaFile('Homo_sapiens.GRCh38.dna.chromosome.Y.fa')
 # likelihood = calculate_likelihood(fasta, mat, 'chrY')
 # print(likelihood)
@@ -347,9 +341,9 @@ def pruning(node, ref, gls, deletions, insertions, ref_lh, chrom):
     matrix of snp pl scores
     """
 
-    global global_it
-    print("global_it = ", global_it)
-    global_it += 1
+    # global global_it
+    # print("global_it = ", global_it)
+    # global_it += 1
 
     if node.parent == None:
         node.lh = ref_lh
@@ -377,7 +371,7 @@ def calculate_pl(gls, ref, pos, chrom="chrM"):
     if chrom == "chrM":
         N = 16569
     elif chrom == "chrY":
-        start = 2781490
+        start = 2781489
         end = 56887900
         N = end - start + 1
     lh = 0
@@ -473,16 +467,32 @@ def glhap(ref, tree, chrom, bcf_in):
 
     return out
 
+ref_fname = "reference/Homo_sapiens.GRCh38.dna.chromosome.Y.fa"
+tree_fname = "Phylotree/yFull.json"
+vcf_fname = "Y_inputfiles/vcf/in.vcf.gz"
 
 out = glhap(
-    "Homo_sapiens.GRCh38.dna.chromosome.Y.fa", "yFull.json", "chrY", "in.vcf.gz"
+    ref_fname, tree_fname, "chrY", vcf_fname
 )
 print(out)
 
-tree = make_tree_from_yFull_json("yFull.json")
-bcf_in = VariantFile("in.vcf.gz")
-ref = FastaFile("Homo_sapiens.GRCh38.dna.chromosome.Y.fa")
+import time# measure time of make_tree_from_yFull_json function 
+start = time.time()
+tree = make_tree_from_yFull_json("Phylotree/yFull.json")
+end = time.time()
+elapsed_time = end - start
+print(elapsed_time)
+
+
+bcf_in = VariantFile("Y_inputfiles/vcf/in.vcf.gz")
+ref = FastaFile("reference/Homo_sapiens.GRCh38.dna.chromosome.Y.fa")
+
+start = time.time()
 gls = get_log_monozygous(bcf_in, "chrY")
+end = time.time()
+elapsed_time = end - start
+print(elapsed_time)
+
 ref_lh = calculate_likelihood(ref, gls, chrom)
 chrom
 insertions = []
@@ -497,7 +507,14 @@ S = list()
 for i in PreOrderIter(tree):
     S.append(i)
 
-S.sort(key=lambda x: x.lh, reverse=False)
+S.sort(key=lambda x: x.lh, reverse=True)
 
 S[0]
 gls[:10]
+
+r = bcf_in.fetch('chrY')
+
+ref_fetch = ref.fetch('chrY')
+ref_fetch[19707942-1]
+ref_fetch[start-2]
+ref_fetch[2781489-1]
