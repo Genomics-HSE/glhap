@@ -17,8 +17,118 @@ from collections import deque
 from typing import Any, List, Set, Dict, Tuple
 from anytree import Node, RenderTree
 from anytree.exporter import DotExporter
-from IPython.display import Image
 import os
+from cffi import FFI
+ffi = FFI()
+
+
+# 1) Provide C definitions matching `likelihoods.h`
+ffi.cdef("""
+    typedef struct {
+        int pos;
+        float val[2];
+    } indel_info_t;
+
+    int get_chrom_length(const char *chrom);
+
+    int compute_log_genotype_likelihood(
+        const char *bcf_file_path,
+        const char *chrom,
+        float ***log_gl_scores_out,
+        indel_info_t **inserts_out,
+        int *n_inserts_out,
+        indel_info_t **deletions_out,
+        int *n_deletions_out
+    );
+
+    void free_likelihoods(float **log_gl_scores, int chrom_length,
+                          indel_info_t *inserts, indel_info_t *deletions);
+""")
+
+# 2) Load the shared library
+lib = ffi.dlopen(os.path.join(os.getcwd(), "compute_pl.so"))
+
+def compute_likelihoods_in_c(bcf_path: str, chrom: str):
+    """
+    Example Python function that:
+      1) calls compute_log_genotype_likelihood
+      2) interprets the resulting pointers
+      3) returns Python (NumPy) arrays or lists
+    """
+
+    bcf_path_bytes = bcf_path.encode("utf-8")
+    chrom_bytes    = chrom.encode("utf-8")
+
+    # Get chromosome length from library
+    chrom_len = lib.get_chrom_length(chrom_bytes)
+    if chrom_len == 0:
+        raise ValueError(f"Unsupported chromosome: {chrom}")
+
+    # Prepare out-parameters
+    # We want 'float ***' => in cffi we can store it in a pointer to a pointer to a pointer...
+    log_gl_scores_ptr = ffi.new("float ***")
+    inserts_ptr_ptr = ffi.new("indel_info_t **")
+    n_inserts_ptr   = ffi.new("int *")
+    deletions_ptr_ptr = ffi.new("indel_info_t **")
+    n_deletions_ptr = ffi.new("int *")
+
+    # Call the function
+    ret = lib.compute_log_genotype_likelihood(
+        bcf_path_bytes,
+        chrom_bytes,
+        log_gl_scores_ptr,
+        inserts_ptr_ptr,
+        n_inserts_ptr,
+        deletions_ptr_ptr,
+        n_deletions_ptr
+    )
+    if ret != 0:
+        raise RuntimeError("Error from compute_log_genotype_likelihood:", ret)
+
+    # Extract the raw pointers
+    # log_gl_scores_ptr is float***
+    #  cffi: log_gl_scores_ptr[0] is a 'float**'
+    log_gl_scores_2d = log_gl_scores_ptr[0]
+
+    inserts_ptr    = inserts_ptr_ptr[0]
+    n_inserts      = n_inserts_ptr[0]
+    deletions_ptr  = deletions_ptr_ptr[0]
+    n_deletions    = n_deletions_ptr[0]
+
+    # 3) Convert the log_gl_scores to a NumPy array of shape (chrom_len, 4)
+    #    cffi references: log_gl_scores_2d[i] is a 'float*' of length 4
+    np_scores = np.zeros((chrom_len, 4), dtype=np.float32)
+
+    for i in range(chrom_len):
+        row_ptr = log_gl_scores_2d[i]  # 'float *'
+        # row_ptr[j] => float
+        for j in range(4):
+            np_scores[i][j] = row_ptr[j]
+
+    # 4) Convert insertion & deletion arrays
+    #    inserts_ptr is a pointer to an array of n_inserts 'indel_info_t'
+    #    We can do inserts_ptr[i].pos, inserts_ptr[i].val[0], ...
+    inserts_py = []
+    for i in range(n_inserts):
+        # Each element is inserts_ptr[i], type 'indel_info_t'
+        pos = inserts_ptr[i].pos
+        val0 = inserts_ptr[i].val[0]
+        val1 = inserts_ptr[i].val[1]
+        inserts_py.append((pos, val0, val1))
+
+    deletions_py = []
+    for i in range(n_deletions):
+        pos = deletions_ptr[i].pos
+        val0 = deletions_ptr[i].val[0]
+        val1 = deletions_ptr[i].val[1]
+        deletions_py.append((pos, val0, val1))
+
+    # 5) Once we've copied data to Python/NumPy, free the allocated memory in C
+    lib.free_likelihoods(log_gl_scores_2d, chrom_len, inserts_ptr, deletions_ptr)
+
+    return np_scores, inserts_py, deletions_py
+
+
 
 class PhylogeneticNode(NodeMixin):
     """
@@ -86,19 +196,19 @@ class PhylogeneticNode(NodeMixin):
 
 
 
-def import_yfull_tree(json_file_path: str) -> Any:
+def import_yfull_tree(json_file_path: str):
     """
-    Create a tree structure from a YFull JSON file.
+    Create a PhylogeneticNode tree structure from a YFull JSON file.
 
     This function reads the JSON file specified by `json_file_path` and uses a 
-    JsonImporter to parse its content into a tree structure. It returns the 
-    root node of the tree.
+    JsonImporter to parse its content into a tree structure, then converts it
+    into a PhylogeneticNode tree.
 
     Args:
         json_file_path (str): The path to the YFull JSON file.
 
     Returns:
-       Node: The root node of the tree.
+        PhylogeneticNode: The root node of the converted tree.
 
     Raises:
         FileNotFoundError: If the file cannot be found or opened.
@@ -116,6 +226,8 @@ def import_yfull_tree(json_file_path: str) -> Any:
     except Exception as error:
         raise Exception("An error occurred while importing the JSON content into a tree structure.") from error
 
+    
+    # Convert the entire tree starting from root
     return root_node
 
 
@@ -642,7 +754,8 @@ def glhap(tree_file: str, chrom: str, bcf_path: str, verbose: bool = False) -> s
         print("BCF file is opened.")
 
     # Compute the matrix of genotype likelihoods and associated indel data.
-    gls, ins_mapping, del_mapping = compute_log_genotype_likelihood(bcf_file, chrom)
+    # gls, ins_mapping, del_mapping = compute_log_genotype_likelihood(bcf_file, chrom)
+    gls, ins_mapping, del_mapping = compute_likelihoods_in_c(bcf_path, chrom)
     if verbose:
         print(f"Genotype likelihood matrix calculated with shape {gls.shape}.")
 
@@ -672,7 +785,7 @@ def glhap(tree_file: str, chrom: str, bcf_path: str, verbose: bool = False) -> s
         if node.name != "-":
             output_lines.append(f"{node.name:<25}|\t{node.lh:<15.2f}")
             count += 1
-            if count == 10:
+            if count == 2:
                 break
 
     if verbose:
@@ -734,6 +847,12 @@ def glhap(tree_file: str, chrom: str, bcf_path: str, verbose: bool = False) -> s
 #     return m, n
                 
 # glhap('/Users/nikita/Desktop/HSE/genomic/glyhap/Phylotree/mtDNA.json', 'chrM', 'mtdna/in1.vcf.gz', verbose=True)
+def main():
+    time_start=time.time()
+    glhap('isogg.json', 'chrY', 'ydna/in1.vcf.gz', verbose=True)
+    time_end=time.time()
+    print(f"Время: {time_end-time_start} s")
 
 
-glhap('isogg.json', 'chrY', 'ydna/in1.cov_0.1.mpileup.vcf.gz', verbose=True)
+if __name__ == "__main__":
+    main()
